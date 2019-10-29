@@ -2,9 +2,9 @@
 
 import sys
 import os
-import re
 import shutil
 import getpass
+import signal
 from common import *
 
 if __name__ == "__main__":
@@ -26,6 +26,23 @@ if __name__ == "__main__":
     user_name = getpass.getuser()
     job_folder_name = slurm_job_id + '_' + job_name + '_' + user_name 
     
+    def signal_handler_suspend(*args):
+        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
+                      u'abq' + abaqus_version + u' suspend' +  
+                      u' job=' + job_folder_name)
+        print(cmd_to_run)
+        os.system(cmd_to_run)
+
+    def signal_handler_resume(*args):
+        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
+                      u'abq' + abaqus_version + u' resume' +  
+                      u' job=' + job_folder_name)
+        print(cmd_to_run)
+        os.system(cmd_to_run)
+
+
+    signal.signal(signal.SIGTSTP, signal_handler_suspend)
+    signal.signal(signal.SIGCONT, signal_handler_resume)
 
     # If there is no folder in the scratch_dir, make one and copy
     #the input file
@@ -42,36 +59,15 @@ if __name__ == "__main__":
     #cd in the scratch folder
     os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
 
-        with open(u'Res_' + input_file_name, 'w') as new_input_file:
-            new_input_file.write(u'*Heading\n')
-            new_input_file.write(new_input_string + '\n')
-            for step_lines in all_step_lines[int(last_step) :]:
-                for line in step_lines:
-                    new_input_file.write(line)
-
-
-        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
-                      u'abq' + abaqus_version + u' job=Res_' + job_name +
-                      u' input=Res_' + input_file_name  + 
-                      u' oldjob=' + job_name + u' cpus=' + slurm_ntasks +
-                      u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
-        print(cmd_to_run)
-        os.system(cmd_to_run)
-
-    else:
-        print("3rd Condition")
-        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
-                      u'abq' + abaqus_version + u' job=' + job_name +
-                      u' input=' + input_file_name + 
-                      u' oldjob=' + job_name + u'cpus=' + slurm_ntasks +
-                      u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
-        os.system(cmd_to_run)
+    cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
+                  u'abq' + abaqus_version + u' job=' + job_folder_name +
+                  u' input=' + input_file_name + 
+                  u' cpus=' + slurm_ntasks +
+                  u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
+    os.system(cmd_to_run)
 
     # If the job is completed, search for a specific string in the job file
-    res_msg_file_name = u'Res_' + job_name + u'.msg'        
     msg_file_name = job_name + u'.msg'        
-    if  os.path.isfile(res_msg_file_name):
-        msg_file_name = res_msg_file_name
     if os.path.isfile(msg_file_name):
         if next(find_the_line('the analysis','has been completed',
                               msg_file_name)):

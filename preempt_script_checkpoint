@@ -101,7 +101,7 @@ if __name__ == "__main__":
         cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
                       u'abq' + abaqus_version + u' job=' + job_name +
                       u' input=' + input_file_name + 
-                      u' oldjob=' + job_name + u'cpus=' + slurm_ntasks +
+                      u' cpus=' + slurm_ntasks +
                       u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
         os.system(cmd_to_run)
 
