@@ -7,63 +7,51 @@ import shutil
 import getpass
 from common import *
 
+
+
 if __name__ == "__main__":
 
-    print(sys.argv)
-    #This env variable has to be unset in order abaqus to run.
-    if 'SLURM_GTIDS' in os.environ:
-        del os.environ['SLURM_GTIDS']
-    
-    #Get slurm env variables
-    submit_dir = sys.argv[1]
-    #Get the input file name
-    job_name = sys.argv[2]
-    input_file_name = job_name + '.inp'
-    slurm_job_id = sys.argv[3]
-    slurm_ntasks = sys.argv[4]
-    abaqus_version = sys.argv[5]
-    
-    user_name = getpass.getuser()
-    job_folder_name = slurm_job_id + '_' + job_name + '_' + user_name 
-    
-    # Search and find the checkpointing line in the input file.  
-    #If found save the frequency value.
-    restart_line = find_the_line('\*restart', 'frequency', input_file_name)
-    if restart_line:
-        restart_line = next(restart_line)
-        search_object = re.search(r'\d+', restart_line.split("=",2)[1])
-        if search_object:
-            frequency = search_object.group()
+
+    def first_run():
+        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
+                      u'abq' + abaqus_version + u' job=' + job_name +
+                      u' input=' + input_file_name + 
+                      u' cpus=' + slurm_ntasks +
+                      u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
+        os.system(cmd_to_run)
+
+
+    def restart_join_run():
+        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 'abq' + abaqus_version +
+                       u' restartjoin originalodb=' + job_name +
+                       u' restartodb=Res_' + job_name + u' history')
+        os.system(cmd_to_run)
+
+    def restart_run():
+        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
+                      u'abq' + abaqus_version + u' job=Res_' + job_name +
+                      u' input=Res_' + input_file_name  + 
+                      u' oldjob=' + job_name + u' cpus=' + slurm_ntasks +
+                      u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
+        print(cmd_to_run)
+        os.system(cmd_to_run)
+
+    def end_run():
+        res_msg_file_name = u'Res_' + job_name + u'.msg'        
+        msg_file_name = job_name + u'.msg'        
+        if  os.path.isfile(res_msg_file_name):
+            msg_file_name = res_msg_file_name
+        if os.path.isfile(msg_file_name):
+            if next(find_the_line('the analysis','has been completed',
+                                  msg_file_name)):
+                finalize_job(job_name,submit_dir)
         else:
-            raise Exception(('Check {} file and make sure the line ' 
-                            'starting with \"*Restart,\" is there and '
-                            'settings are correct').format(input_file_name))
+            print("No message file has been found. The analysis has probably " +
+                  "never been run!")
 
-    # If there is no folder in the scratch_dir, make one and copy
-    #the input file
-    if not os.path.isdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name):
-        os.mkdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
-        shutil.copy(input_file_name, AbaqusConstants.SCRATCH_FOLDER + 
-                    job_folder_name)
-        #Read additional files from the file and copy them to scratch
-        additional_files = look_for_include_files(input_file_name)
-        for file_name in additional_files:
-            shutil.copy(file_name, AbaqusConstants.SCRATCH_FOLDER + 
-                            job_folder_name)
-                
-    #cd in the scratch folder
-    os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
+        sys.exit()
 
-    # If there the job has been already restarted at least once 
-    #move the Res_ files to original files and join odbs
-    if os.path.isfile('Res_' + job_name + '.sta'):
-        print("1st condition")
-        wildcard_operations(os.curdir,'*.lck', operation='remove')  
-        restart_join(abaqus_version, job_name)
-        merge_res_files(job_name)
-
-    if os.path.isfile(job_name + '.sta'):
-
+    def create_new_input_file():
         print("2nd condition")
         all_step_lines = get_step_lines(input_file_name) 
 
@@ -86,36 +74,64 @@ if __name__ == "__main__":
             for step_lines in all_step_lines[int(last_step) :]:
                 for line in step_lines:
                     new_input_file.write(line)
+                    
+    ### Script Starts here 
+    print(sys.argv)
+    #Get slurm env variables
+    submit_dir = sys.argv[1]
+    #Get the input file name
+    job_name = sys.argv[2]
+    input_file_name = job_name + '.inp'
+    slurm_job_id = sys.argv[3]
+    slurm_ntasks = sys.argv[4]
+    abaqus_version = sys.argv[5]
+    partition_name = sys.argv[6] 
 
+    user_name = getpass.getuser()
+    job_folder_name = slurm_job_id + '_' + job_name + '_' + user_name 
 
-        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
-                      u'abq' + abaqus_version + u' job=Res_' + job_name +
-                      u' input=Res_' + input_file_name  + 
-                      u' oldjob=' + job_name + u' cpus=' + slurm_ntasks +
-                      u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
-        print(cmd_to_run)
-        os.system(cmd_to_run)
+    #Set the sbatch job name
+    os.environ['SBATCH_JOB_NAME'] = job_name
+
+    #Determine if checkpointing is necessary
+    if re.search('lowprio', partition_name, re.IGNORECASE):
+        pass 
+    else:
+        first_run()
+        end_run()
+        
+    # Search and find the checkpointing line in the input file.  
+    #If found save the frequency value.
+    restart_line = find_the_line('\*restart', 'frequency', input_file_name)
+    if restart_line:
+        restart_line = next(restart_line)
+        search_object = re.search(r'\d+', restart_line.split("=",2)[1])
+        if search_object:
+            frequency = search_object.group()
+        else:
+            raise Exception(('LowPrio queue requires checkpointing enabled. '
+                            'Check {} file and make sure the line ' 
+                            'starting with \"*Restart,\" is there and '
+                            'settings are correct').format(input_file_name))
+                
+    create_scratch_and_move()
+
+    # If there the job has been already restarted at least once 
+    #move the Res_ files to original files and join odbs
+    if os.path.isfile('Res_' + job_name + '.sta'):
+        print("1st condition")
+        wildcard_operations(os.curdir,'*.lck', operation='remove')  
+        restart_join_run(abaqus_version, job_name)
+        merge_res_files(job_name)
+
+    if os.path.isfile(job_name + '.sta'):
+
+       create_new_input_files()
+       restart_run()
 
     else:
         print("3rd Condition")
-        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 
-                      u'abq' + abaqus_version + u' job=' + job_name +
-                      u' input=' + input_file_name + 
-                      u' cpus=' + slurm_ntasks +
-                      u' -verbose 3 standard_parallel=all mp_mode=mpi interactive')
-        os.system(cmd_to_run)
+        first_run()
+        # If the job is completed, search for a specific string in the job file
 
-    # If the job is completed, search for a specific string in the job file
-    res_msg_file_name = u'Res_' + job_name + u'.msg'        
-    msg_file_name = job_name + u'.msg'        
-    if  os.path.isfile(res_msg_file_name):
-        msg_file_name = res_msg_file_name
-    if os.path.isfile(msg_file_name):
-        if next(find_the_line('the analysis','has been completed',
-                              msg_file_name)):
-            finalize_job(job_name,submit_dir)
-    else:
-        print("No message file has been found. The analysis has probably " +
-              "never been run!")
-
-    sys.exit()
+    end_run()

@@ -60,6 +60,21 @@ def wildcard_operations(sourcePath, pattern,
                 listOfFilesWithError.append(os.path.join(parentDir, filename))
     return listOfFilesWithError
 
+def create_scratch_and_move(input_file_name,job_folder_name):
+    # If there is no folder in the scratch_dir, make one and copy
+    #the input file
+    if not os.path.isdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name):
+        os.mkdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
+        shutil.copy(input_file_name, AbaqusConstants.SCRATCH_FOLDER + 
+                    job_folder_name)
+        #Read additional files from the file and copy them to scratch
+        additional_files = look_for_include_files(input_file_name)
+        for file_name in additional_files:
+            shutil.copy(file_name, AbaqusConstants.SCRATCH_FOLDER + 
+                            job_folder_name)
+
+    #cd in the scratch folder
+    os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
     
 def merge_res_files(job_name):
     #Renaming all the res files to original filenames
@@ -81,12 +96,6 @@ def merge_res_files(job_name):
                 pass
 
 
-def restart_join(abaqus_version, job_name):
-        cmd_to_run = (AbaqusConstants.BIN_LOCATION  + 'abq' + abaqus_version + 
-                      u' restartjoin originalodb=' + job_name +
-                      u' restartodb=Res_' + job_name + u' history')
-        os.system(cmd_to_run)
-    
 
 def finalize_job(job_name,submit_dir):
     print("Job is completed. Residual files will be cleared")
@@ -104,6 +113,5 @@ def look_for_include_files(input_file_name):
         if line:
             additional_file = line.split("=",2)[1].split("inp",2)[0] + "inp"
             yield additional_file
-
 
 

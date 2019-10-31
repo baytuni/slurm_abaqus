@@ -11,9 +11,10 @@ if __name__ == "__main__":
     def signal_handler_resume(*args):
         print("Continued")
 
+    print(os.getpid())
     signal.signal(signal.SIGTSTP, signal_handler_suspend)
     signal.signal(signal.SIGCONT, signal_handler_resume)
-    print(os.getpid())
+
     i=0
     while i<100:
         time.sleep(1)
