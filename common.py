@@ -10,8 +10,12 @@ class AbaqusConstants:
                         u'.com', u'.cid', u'.023', u'.dat', u'.msg', u'.sta']
     OUTPUT_FILE_EXTENSIONS = [u'.odb', u'.msg', u'.dat', u'.sta']
     BIN_LOCATION = u'/usrfem/femsys/abaqus/Commands/'
-    SCRATCH_FOLDER = u'/usrfem/Scratch_global/'               
+    SCRATCH_FOLDER = u'/Scratch_local/'               
+    #SCRATCH_FOLDER = u'/usrfem/Scratch_global/'               
 
+class LicenseConstants:
+    LMUTIL_PATH = u'/usrfem/util/DIVERS/lmutil_linux'
+    LICENSE_PATH = u'/usrfem/femsys/abaqus/abaqus_semcon.lic'
 
 def find_the_line(pattern_1, pattern_2, filename):
     for line in open(filename, 'r'):
@@ -40,24 +44,27 @@ def get_step_lines(input_file_name):
 
 
 '''
-Generic function to delete  or move all the files from a given 
+Generic function to delete, move, or copy all the files from a given 
 directory based on matching pattern
 '''
 def wildcard_operations(sourcePath, pattern, 
                         operation='remove', targetPath=None):
     listOfFilesWithError = []
-    for parentDir, dirnames, filenames in os.walk(sourcePath):
-        for filename in fnmatch.filter(filenames, pattern):
-            try:
-                if operation == 'remove':
-                    os.remove(os.path.join(parentDir, filename))
-                if operation == 'move' and targetPath:
-                    shutil.move(os.path.join(parentDir, filename), 
-                                targetPath)
-            except:
-                print("Error while deleting file : ", 
-                     os.path.join(parentDir, filename))
-                listOfFilesWithError.append(os.path.join(parentDir, filename))
+    parentDir, _, filenames = next(os.walk(sourcePath))
+    for filename in fnmatch.filter(filenames, pattern):
+        try:
+            if operation == 'remove':
+                os.remove(os.path.join(parentDir, filename))
+            if operation == 'move' and targetPath:
+                shutil.move(os.path.join(parentDir, filename), 
+                            targetPath)
+            if operation == 'copy' and targetPath:
+                shutil.copy2(os.path.join(parentDir, filename), 
+                            targetPath)
+        except:
+            print("Error while deleting file : ", 
+                 os.path.join(parentDir, filename))
+            listOfFilesWithError.append(os.path.join(parentDir, filename))
     return listOfFilesWithError
 
 def create_scratch_and_move(input_file_name,job_folder_name):
@@ -73,8 +80,7 @@ def create_scratch_and_move(input_file_name,job_folder_name):
             shutil.copy(file_name, AbaqusConstants.SCRATCH_FOLDER + 
                             job_folder_name)
 
-    #cd in the scratch folder
-    os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
+
     
 def merge_res_files(job_name):
     #Renaming all the res files to original filenames
@@ -98,13 +104,16 @@ def merge_res_files(job_name):
 
 
 def finalize_job(job_name,submit_dir):
-    print("Job is completed. Residual files will be cleared")
 
     merge_res_files(job_name)
 
+    #print("submit dir:" + submit_dir)
+    #print("scratch_dir:" + os.getcwd())
     for ext in AbaqusConstants.OUTPUT_FILE_EXTENSIONS:
-        wildcard_operations(os.curdir, ext, 
-                            operation='move', targetPath=submit_dir)
+        shutil.copy2(os.path.join(os.getcwd(), job_name + ext), 
+                                 submit_dir)
+    print("Job is completed." + 
+          "All output files has been copied back to the submit folder")
     
     
 def look_for_include_files(input_file_name):
