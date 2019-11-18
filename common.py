@@ -17,6 +17,9 @@ class LicenseConstants:
     LMUTIL_PATH = u'/usrfem/util/DIVERS/lmutil_linux'
     LICENSE_PATH = u'/usrfem/femsys/abaqus/abaqus_semcon.lic'
 
+def sorted_indicies(seq):
+    return sorted(range(len(seq)), key=seq.__getitem__)
+    
 def find_the_line(pattern_1, pattern_2, filename):
     for line in open(filename, 'r'):
         if re.search(pattern_1, line, re.IGNORECASE):
