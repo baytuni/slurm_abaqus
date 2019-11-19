@@ -1,19 +1,33 @@
 #!/usr/bin/env python3
 import os
-from scheduler_classes import LicenseManager
 import common
 import subprocess
+import socket
 
+HOST = socket.gethostname()
+PORT = 65432
 
 if __name__ == "__main__":
-    if 'SLURM_JOB_ID' in os.environ.keys():
+
+
+    """     if 'SLURM_JOB_ID' in os.environ.keys():
         job_name = os.environ['SLURM_JOB_ID']
         job_partition = os.environ['SLURM_JOB_PARTITION']
     else:
         exit(0)
+    """
+
+    s = socket.socket()
+    s.connect((HOST, PORT))
+    s.send(b'REQUEST 435 6 1 2019-11-19T09:12:51')
+    response = s.recv(1024)
+    if response.decode() == 'SUCCESS':
+        print('ACCEPTED')
+    else:
+        print('REJECTED')
 
 
-    cmd_to_run = ['scontrol', 'show', 'partition=' + job_partition]
+    """ cmd_to_run = ['scontrol', 'show', 'partition=' + job_partition]
     cmd_process = subprocess.Popen(cmd_to_run, stdout=subprocess.PIPE)
     partition_prio = 0
     with cmd_process.stdout as st:
@@ -24,4 +38,4 @@ if __name__ == "__main__":
                 partition_prio = int(word[1])
     print ('Test')
     print('print ' + 'partition priority=' + partition_prio)
-    exit(0)
+    exit(0) """
