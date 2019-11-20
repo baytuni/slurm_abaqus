@@ -73,15 +73,20 @@ def wildcard_operations(sourcePath, pattern,
 def create_scratch_and_move(input_file_name,job_folder_name):
     # If there is no folder in the scratch_dir, make one and copy
     #the input file
-    if not os.path.isdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name):
-        os.mkdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
-        shutil.copy(input_file_name, AbaqusConstants.SCRATCH_FOLDER + 
-                    job_folder_name)
+    scratch_job_folder = os.path.join(AbaqusConstants.SCRATCH_FOLDER,
+                                      job_folder_name)
+    if not os.path.isdir(scratch_job_folder):
+        os.mkdir(scratch_job_folder)
+        shutil.copy(input_file_name, scratch_job_folder)
         #Read additional files from the file and copy them to scratch
-        additional_files = look_for_include_files(input_file_name)
-        for file_name in additional_files:
-            shutil.copy(file_name, AbaqusConstants.SCRATCH_FOLDER + 
-                            job_folder_name)
+        include_file_lines = look_for_include_files(input_file_name)
+        for folder_name, file_name in include_file_lines:
+            scratch_include_path = os.path.join(scratch_job_folder,
+                                                folder_name)
+            if not os.path.exists(scratch_include_path):
+                os.makedirs(scratch_include_path)
+            include_file_path = os.path.join(folder_name, file_name)
+            shutil.copy(include_file_path, scratch_include_path)
 
 
     
@@ -123,7 +128,16 @@ def look_for_include_files(input_file_name):
     additional_files = find_the_line('include','input',input_file_name)
     for line in additional_files:
         if line:
-            additional_file = line.split("=",2)[1].split("inp",2)[0] + "inp"
-            yield additional_file
+            line = line.replace('\n', '')
+            line = line.split("=", 2)[1]
+            #get rid of the first dot in the relative path
+            split_path = line.replace('./', '').rsplit('/', 1)
+            additional_file = split_path[-1]
+            if len(split_path) > 1:
+                relative_folder_path = split_path[0]
+            else:
+                relative_folder_path = None   
+
+            yield relative_folder_path, additional_file
 
 

@@ -107,8 +107,7 @@ if __name__ == "__main__":
         if old_job_name:
             '''this means job is submitted with a restart option in 
             from the beginning'''
-            create_scratch_and_move(input_file_name, job_folder_name, 
-                                    old_input_file_name=old_input_file_name)
+            create_scratch_and_move(input_file_name, job_folder_name) 
             #cd in the scratch folder
             os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
 
@@ -123,8 +122,8 @@ if __name__ == "__main__":
     # Search and find the checkpointing line in the input file.  
     #If found save the frequency value.
     restart_line = find_the_line('\*restart', 'frequency', input_file_name)
+    restart_line = next(restart_line)
     if restart_line:
-        restart_line = next(restart_line)
         search_object = re.search(r'\d+', restart_line.split("=",2)[1])
         if search_object:
             frequency = search_object.group()
@@ -145,7 +144,7 @@ if __name__ == "__main__":
         print("1st condition")
 #        wildcard_operations(os.curdir,'*.lck', operation='remove')  
         os.remove(os.path.join(os.curdir, job_name + '.lck'))
-        restart_join_run(abaqus_version, job_name)
+        restart_join_run()
         merge_res_files(job_name)
 
     if os.path.isfile(job_name + '.sta'):

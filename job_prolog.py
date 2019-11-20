@@ -10,21 +10,26 @@ PORT = 65432
 if __name__ == "__main__":
 
 
-    """     if 'SLURM_JOB_ID' in os.environ.keys():
+    if 'SLURM_JOB_ID' in os.environ.keys():
         job_name = os.environ['SLURM_JOB_ID']
         job_partition = os.environ['SLURM_JOB_PARTITION']
+        #ntasks = os.environ['SLURM_NTASKS']
+        #cpus_per_task = os.environ['SLURM_CPUS_PER_TASK']
+        print(os.environ)
     else:
         exit(0)
-    """
+   
 
     s = socket.socket()
     s.connect((HOST, PORT))
     s.send(b'REQUEST 435 6 1 2019-11-19T09:12:51')
     response = s.recv(1024)
+    print(response.decode())
     if response.decode() == 'SUCCESS':
         print('ACCEPTED')
     else:
         print('REJECTED')
+    s.close()
 
 
     """ cmd_to_run = ['scontrol', 'show', 'partition=' + job_partition]

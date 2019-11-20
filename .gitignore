@@ -9,6 +9,8 @@ __pycache__/
 *.swp
 # C extensions
 *.so
+# Logs
+*.log
 
 # Distribution / packaging
 .Python
@@ -108,3 +110,5 @@ dmypy.json
 
 # End of https://www.gitignore.io/api/python
 .vscode/settings.json
+SlurmLicenseManager.log
+SlurmLicenseManager.log

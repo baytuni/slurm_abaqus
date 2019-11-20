@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/python3 -u
 
 import os
 import sys
@@ -8,7 +8,7 @@ import socket
 import logging
 
 log_location = '/var/log'
-log_location = '.'
+#log_location = '.'
 log_fname = 'SlurmLicenseManager.log'
 log_full_name = os.path.join(log_location, log_fname)
 logging.basicConfig(filename=log_full_name, 
@@ -57,7 +57,7 @@ while True:
                               f' tokens are being used out of '
                               f'{license_manager.total_tokens}')
             else:
-                conn.send(bytes(answer))
+                conn.send(bytes(answer,'utf8'))
                 logging.warning(f'License denied for jobid={job_id}. {answer}')
         elif request_type == 'REMOVE':
                 answer = license_manager.remove_jobs(job_id)

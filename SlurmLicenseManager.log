@@ -29,3 +29,38 @@
 19-Nov-19 14:21:44 - License Request has been received
 19-Nov-19 14:21:44 - 6 tokens granted for jobid=435.
 Currently 0tokens are being used out of18
+20-Nov-19 08:54:56 - Closing the socket
+20-Nov-19 10:47:31 - Socket Created
+20-Nov-19 10:47:31 - Socket bound to port:65432
+20-Nov-19 10:47:31 - License Manager is listening
+20-Nov-19 10:47:48 - Connection from ('193.15.96.199', 59832) has been established.
+20-Nov-19 10:47:48 - License Request has been received
+20-Nov-19 10:53:39 - Socket Created
+20-Nov-19 10:53:39 - Socket bound to port:65432
+20-Nov-19 10:53:39 - License Manager is listening
+20-Nov-19 10:53:49 - Connection from ('193.15.96.199', 59922) has been established.
+20-Nov-19 10:53:49 - License Request has been received
+20-Nov-19 10:53:49 - License denied for jobid=435. Not enough tokens to grant.
+20-Nov-19 11:22:11 - Connection from ('193.15.96.199', 59990) has been established.
+20-Nov-19 11:22:11 - License Request has been received
+20-Nov-19 11:22:11 - 6 tokens granted for jobid=435.
+Currently 6 tokens are being used out of 18
+20-Nov-19 11:33:55 - Connection from ('193.15.96.199', 60044) has been established.
+20-Nov-19 11:33:55 - jobid=435 removed, licenses are released
+20-Nov-19 12:45:02 - Closing the socket
+20-Nov-19 12:46:16 - Socket Created
+20-Nov-19 12:46:16 - Socket bound to port:65432
+20-Nov-19 12:46:16 - License Manager is listening
+20-Nov-19 12:46:18 - Closing the socket
+20-Nov-19 12:47:42 - Socket Created
+20-Nov-19 12:47:42 - Socket bound to port:65432
+20-Nov-19 12:47:42 - License Manager is listening
+20-Nov-19 12:50:36 - Closing the socket
+20-Nov-19 12:56:43 - Socket Created
+20-Nov-19 12:56:43 - Socket bound to port:65432
+20-Nov-19 12:56:43 - License Manager is listening
+20-Nov-19 12:57:03 - Closing the socket
+20-Nov-19 13:45:48 - Socket Created
+20-Nov-19 13:45:48 - Socket bound to port:65432
+20-Nov-19 13:45:48 - License Manager is listening
+20-Nov-19 13:45:49 - Closing the socket

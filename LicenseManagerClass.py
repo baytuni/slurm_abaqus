@@ -1,8 +1,7 @@
 import common
 import subprocess
-from dataclasses import dataclass
 
-@dataclass
+
 class SuspendedJobs:
     job_ids = []
     tokens_per_job = []
@@ -34,6 +33,7 @@ class LicenseManager:
             self.running_start_times.pop(ind)
             tokens = self.running_tokens_per_job.pop(ind)
             self.internal_tokens -= tokens
+
             if job_id in self.borrower_jobs:
                 ind = self.borrower_jobs.index(job_id)
                 self.borrower_jobs.pop(ind)
@@ -47,24 +47,19 @@ class LicenseManager:
                     self.running_partition_prios.append(
                                         suspended_jobs.partition_prios[i])
                     self.internal_tokens += self.running_tokens_per_job
-            return self.SUCCESS
 
+            return self.SUCCESS
         else:
             return self.JOBNOTINRECORDS
 
 
     def add_jobs(self, job_id, tokens, partition_prio, start_time):
-        if job_id in self.running_job_ids:
-            self.running_tokens_per_job.append(tokens)
-            self.running_partition_prios.append(partition_prio)
-            self.running_job_ids.append(job_id)
-            self.running_start_times.append(start_time)
-            self.internal_tokens += tokens
-            return self.SUCCESS
-        else:
-            return self.JOBALREADYINRECORDS
+        self.running_tokens_per_job.append(tokens)
+        self.running_partition_prios.append(partition_prio)
+        self.running_job_ids.append(job_id)
+        self.running_start_times.append(start_time)
+        self.internal_tokens += tokens
                 
-
 
     def get_external_tokens(self):
         cmd_to_run = [common.LicenseConstants.LMUTIL_PATH, 'lmstat', '-c', 
@@ -79,16 +74,20 @@ class LicenseManager:
                     return int(words[10])
 
     def grant_tokens(self, job_id, tokens, partition_prio, start_time):
-        available_tokens = (self.total_tokens - self.get_external_tokens() 
-                            - self.internal_tokens)
-        if tokens <= available_tokens:
+        if (job_id in self.running_job_ids):
+            return self.JOBALREADYINRECORDS
+
+        available_tokens = (self.total_tokens - self.get_external_tokens())
+
+        if tokens <= available_tokens:            
             self.add_jobs(job_id, tokens, partition_prio, start_time) 
             return self.SUCCESS
         else:
-            return self.borrow_tokens(job_id, tokens, partition_prio, start_time)
-        return self.NOTENOUGHTOKENS               
+            return self.borrow_tokens(job_id, tokens, partition_prio, 
+                                      start_time)
 
-    def borrow_tokens(self,job_id,tokens,partition_prio,start_time):
+    def borrow_tokens(self,job_id,tokens_needed,partition_prio,start_time):
+        #Collect low prio job indices in candidate_inds
         candidate_inds = []
         prio_sorted_indices = common.sorted_indicies(
                                 self.running_partition_prios)
@@ -96,26 +95,36 @@ class LicenseManager:
             if self.running_partition_prios[i] < partition_prio:
                 candidate_inds.append(i)
 
-        tokens_released = 0
+        # Sort using start times because slurm does the same
+        releasable_tokens = 0
+        released_tokens = 0
         release_inds = []
-
-        token_sorted = common.sorted_indicies(self.running_start_times)
-        for i in token_sorted:
+        time_sorted_inds = common.sorted_indicies(self.running_start_times)
+        for i in time_sorted_inds:
             if i in candidate_inds:
-                tokens_released += self.running_tokens_per_job[i]
+                releasable_tokens += self.running_tokens_per_job[i]
                 release_inds.append(i)
-            if tokens_released >= tokens:
-                self.borrower_jobs.append(job_id)
-                suspended_jobs = SuspendedJobs()
-                for j in release_inds:
-                    suspended_jobs.job_ids.append(self.running_job_ids.pop(j))
-                    suspended_jobs.tokens_per_job.append(
-                                        self.running_tokens_per_job.pop(j))
-                    suspended_jobs.partition_prios.append(
-                                        self.running_partition_prios.pop(j))
-                    suspended_jobs.start_times.append(
-                                        self.running_start_times.pop(j))
-                self.borrowed_jobs.append(suspended_jobs)
-                self.internal_tokens -= tokens_released
-                return self.add_jobs(job_id, tokens, partition_prio, 
-                                        start_time) 
+
+        if releasable_tokens >= tokens_needed:
+            self.borrower_jobs.append(job_id)
+            suspended_jobs = SuspendedJobs()
+            for j in release_inds:
+                suspended_jobs.job_ids.append(self.running_job_ids.pop(j))
+                popped_tokens = self.running_tokens_per_job.pop(j)
+ 
+                suspended_jobs.tokens_per_job.append(popped_tokens)
+                suspended_jobs.partition_prios.append(
+                                self.running_partition_prios.pop(j))
+                suspended_jobs.start_times.append(
+                                    self.running_start_times.pop(j))
+                released_tokens += popped_tokens
+                if releasable_tokens >= tokens_needed:
+                    break
+
+            self.borrowed_jobs.append(suspended_jobs)
+            self.internal_tokens -= released_tokens
+
+            self.add_jobs(job_id, tokens_needed, partition_prio, start_time) 
+            return self.SUCCESS
+        else:
+            return self.NOTENOUGHTOKENS
