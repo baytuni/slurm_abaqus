@@ -39,17 +39,16 @@ while True:
         args = args.decode().split()
         request_type = args[0]
         job_id = args[1]
-        tokens = int(args[2])
-        partition_prio = int(args[3])
-        start_time = args[4]
-        start_time = time.strptime(start_time,'%Y-%m-%dT%H:%M:%S')
+        #tokens = int(args[2])
+        #partition_prio = int(args[3])
+        #start_time = args[4]
+        #start_time = time.strptime(start_time,'%Y-%m-%dT%H:%M:%S')
 
         if request_type == 'REQUEST':
             logging.info(f'License Request has been received')
             print(license_manager.internal_tokens, 
                     license_manager.total_tokens)
-            answer = license_manager.grant_tokens(job_id, tokens, 
-                        partition_prio, start_time)
+            answer = license_manager.grant_tokens(job_id) 
             if answer == license_manager.SUCCESS:
                 conn.send(b'SUCCESS')
                 logging.info(f'{tokens} tokens granted for jobid={job_id}.\n'

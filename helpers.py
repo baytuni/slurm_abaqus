@@ -1,25 +1,14 @@
 import os
+import sys
 import re
 import shutil
 import fnmatch
 import subprocess
 import time 
 
-class AbaqusConstants:
-    FILE_EXTENSIONS =  [u'.res', u'.mdl', u'.stt', u'.prt', u'.sim',   
-                        u'.com', u'.cid', u'.023', u'.dat', u'.msg', u'.sta']
-    OUTPUT_FILE_EXTENSIONS = [u'.odb', u'.msg', u'.dat', u'.sta']
-    BIN_LOCATION = u'/usrfem/femsys/abaqus/Commands/'
-    SCRATCH_FOLDER = u'/Scratch_local/'               
-    #SCRATCH_FOLDER = u'/usrfem/Scratch_global/'               
+from constants import AbaqusConstants, LicenseConstants
 
-class LicenseConstants:
-    LMUTIL_PATH = u'/usrfem/util/DIVERS/lmutil_linux'
-    LICENSE_PATH = u'/usrfem/femsys/abaqus/abaqus_semcon.lic'
 
-def sorted_indicies(seq):
-    return sorted(range(len(seq)), key=seq.__getitem__)
-    
 def find_the_line(pattern_1, pattern_2, filename):
     for line in open(filename, 'r'):
         if re.search(pattern_1, line, re.IGNORECASE):
@@ -83,9 +72,10 @@ def create_scratch_and_move(input_file_name,job_folder_name):
         for folder_name, file_name in include_file_lines:
             scratch_include_path = os.path.join(scratch_job_folder,
                                                 folder_name)
+            include_file_path = os.path.join(folder_name, file_name)
+
             if not os.path.exists(scratch_include_path):
                 os.makedirs(scratch_include_path)
-            include_file_path = os.path.join(folder_name, file_name)
             shutil.copy(include_file_path, scratch_include_path)
 
 
@@ -136,8 +126,34 @@ def look_for_include_files(input_file_name):
             if len(split_path) > 1:
                 relative_folder_path = split_path[0]
             else:
-                relative_folder_path = None   
+                relative_folder_path = ''   
 
             yield relative_folder_path, additional_file
 
 
+
+def create_new_input_file(job_name, input_file_name, submit_dir, 
+                          frequency):
+    print("2nd condition")
+    all_step_lines = get_step_lines(input_file_name) 
+
+    with open(job_name + u'.sta', 'r') as sta_file:
+        line_list = sta_file.readlines()
+
+    if re.search('completed', line_list[-1], re.IGNORECASE):
+        finalize_job(job_name, submit_dir)
+        sys.exit()
+
+    last_line = line_list[-1].split()
+    last_step = last_line[0]
+    last_increment = last_line[1]
+    new_input_string = ('*Restart, read, step=' + last_step + 
+                        ', inc=' + last_increment + 
+                        ', write, overlay, frequency=' +  frequency)
+    with open(u'Res_' + input_file_name, 'w') as new_input_file:
+        new_input_file.write(u'*Heading\n')
+        new_input_file.write(new_input_string + '\n')
+        for step_lines in all_step_lines[int(last_step) :]:
+            for line in step_lines:
+                new_input_file.write(line)
+                

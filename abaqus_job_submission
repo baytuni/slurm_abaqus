@@ -5,7 +5,10 @@ import os
 import re
 import shutil
 import getpass
-from common import *
+
+import helpers 
+from constants import AbaqusConstants, LicenseConstants
+
 
 
 def first_run():
@@ -40,40 +43,15 @@ def end_run():
     if  os.path.isfile(res_msg_file_name):
         msg_file_name = res_msg_file_name
     if os.path.isfile(msg_file_name):
-        if next(find_the_line('the analysis','has been completed',
+        if next(helpers.find_the_line('the analysis','has been completed',
                               msg_file_name)):
-            finalize_job(job_name,submit_dir)
+            helpers.finalize_job(job_name,submit_dir)
     else:
         print("No message file has been found. The analysis has probably " +
               "never been run!")
 
     sys.exit()
 
-
-def create_new_input_file():
-    print("2nd condition")
-    all_step_lines = get_step_lines(input_file_name) 
-
-    with open(job_name + u'.sta', 'r') as sta_file:
-        line_list = sta_file.readlines()
-
-    if re.search('completed', line_list[-1], re.IGNORECASE):
-        finalize_job(job_name, submit_dir)
-        sys.exit()
-
-    last_line = line_list[-1].split()
-    last_step = last_line[0]
-    last_increment = last_line[1]
-    new_input_string = ('*Restart, read, step=' + last_step + 
-                        ', inc=' + last_increment + 
-                        ', write, overlay, frequency=' +  frequency)
-    with open(u'Res_' + input_file_name, 'w') as new_input_file:
-        new_input_file.write(u'*Heading\n')
-        new_input_file.write(new_input_string + '\n')
-        for step_lines in all_step_lines[int(last_step) :]:
-            for line in step_lines:
-                new_input_file.write(line)
-                
 
 ### Script Starts here 
 if __name__ == "__main__":
@@ -86,7 +64,10 @@ if __name__ == "__main__":
     slurm_ntasks = os.environ['SLURM_NTASKS'] 
     abaqus_version = os.environ['ABQVER'] 
     partition_name = os.environ['SLURM_JOB_PARTITION'] 
+    
+    
 
+    helpers.reserve_tokens(slurm_job_id, )
     if 'OLDJOB' in os.environ:
         old_job_name = os.environ['OLDJOB']
         old_input_file_name = old_job_name + u'inp'
@@ -107,13 +88,15 @@ if __name__ == "__main__":
         if old_job_name:
             '''this means job is submitted with a restart option in 
             from the beginning'''
-            create_scratch_and_move(input_file_name, job_folder_name) 
+            helpers.create_scratch_and_move(input_file_name, 
+                                            job_folder_name) 
             #cd in the scratch folder
             os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
 
             restart_run(job_name, input_file_name, old_job_name)
         else:
-            create_scratch_and_move(input_file_name, job_folder_name)
+            helpers.create_scratch_and_move(input_file_name, 
+                                            job_folder_name)
             #cd in the scratch folder
             os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
             first_run()
@@ -121,7 +104,8 @@ if __name__ == "__main__":
         
     # Search and find the checkpointing line in the input file.  
     #If found save the frequency value.
-    restart_line = find_the_line('\*restart', 'frequency', input_file_name)
+    restart_line = helpers.find_the_line('\*restart', 'frequency', 
+                                         input_file_name)
     restart_line = next(restart_line)
     if restart_line:
         search_object = re.search(r'\d+', restart_line.split("=",2)[1])
@@ -133,7 +117,7 @@ if __name__ == "__main__":
                             'starting with \"*Restart,\" is there and '
                             'settings are correct').format(input_file_name))
                 
-    create_scratch_and_move(input_file_name,job_folder_name)
+    helpers.create_scratch_and_move(input_file_name,job_folder_name)
 
     #cd in the scratch folder
     os.chdir(AbaqusConstants.SCRATCH_FOLDER + job_folder_name)
@@ -145,11 +129,12 @@ if __name__ == "__main__":
 #        wildcard_operations(os.curdir,'*.lck', operation='remove')  
         os.remove(os.path.join(os.curdir, job_name + '.lck'))
         restart_join_run()
-        merge_res_files(job_name)
+        helpers.merge_res_files(job_name)
 
     if os.path.isfile(job_name + '.sta'):
 
-       create_new_input_file()
+       helpers.create_new_input_file(job_name, input_file_name, 
+                                     submit_dir, frequency)
        restart_run(u'Res_' + job_name, u'Res_' + input_file_name, job_name)
 
     else:
