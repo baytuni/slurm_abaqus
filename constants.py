@@ -14,3 +14,4 @@ class LicenseConstants:
     ABAQUS_GRES_STRING = u'gres=license:abaqus:'
     LICENSE_MANAGER_PORT = 65432
     SLURM_CONTROL_SERVER = u'se-got-queue01'
+    ABAQUS_CALC_SERVER = u'se-got-nc001'
