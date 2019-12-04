@@ -5,10 +5,10 @@ import os
 import re
 import shutil
 import getpass
+import socket
 
 import helpers 
 from constants import AbaqusConstants, LicenseConstants
-
 
 
 def first_run():
@@ -38,14 +38,20 @@ def restart_run(new_job, new_input_file, old_job):
 
 
 def end_run():
-    res_msg_file_name = u'Res_' + job_name + u'.msg'        
+    file_name = u'Res_' + job_name 
+    res_msg_file_name = file_name + u'.msg'        
     msg_file_name = job_name + u'.msg'        
     if  os.path.isfile(res_msg_file_name):
         msg_file_name = res_msg_file_name
-    if os.path.isfile(msg_file_name):
+        file_name =  job_name 
+    if os.path.isfile(msg_file_name):        
         if next(helpers.find_the_line('the analysis','has been completed',
                               msg_file_name)):
+            # if 'SBATCH_GRES' in os.environ:
+            #     helpers.release_tokens(slurm_job_id)
             helpers.finalize_job(job_name,submit_dir)
+        elif next(helpers.find_the_line('fatal','',msg_file_name)):
+            helpers.copy_dat_file(file_name, submit_dir)
     else:
         print("No message file has been found. The analysis has probably " +
               "never been run!")
@@ -66,8 +72,10 @@ if __name__ == "__main__":
     partition_name = os.environ['SLURM_JOB_PARTITION'] 
     
     
+    #contact license manager and reserve/release licenses if possible
+    #if 'SBATCH_GRES' in os.environ:
+    #    helpers.reserve_tokens(slurm_job_id)
 
-    helpers.reserve_tokens(slurm_job_id, )
     if 'OLDJOB' in os.environ:
         old_job_name = os.environ['OLDJOB']
         old_input_file_name = old_job_name + u'inp'

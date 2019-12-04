@@ -5,6 +5,7 @@ import shutil
 import fnmatch
 import subprocess
 import time 
+import socket
 
 from constants import AbaqusConstants, LicenseConstants
 
@@ -99,10 +100,14 @@ def merge_res_files(job_name):
             except:
                 pass
 
+def copy_dat_file(job_name, submit_dir):
+
+    shutil.copy2(os.path.join(os.getcwd(), job_name + '.dat'), submit_dir)
+    print("Job produced a fata error. .dat file has been copied" + 
+            "to the submit folder")
 
 
 def finalize_job(job_name,submit_dir):
-
     merge_res_files(job_name)
 
     #print("submit dir:" + submit_dir)
@@ -157,3 +162,16 @@ def create_new_input_file(job_name, input_file_name, submit_dir,
             for line in step_lines:
                 new_input_file.write(line)
                 
+def reserve_tokens(job_id):
+    host = LicenseConstants.SLURM_CONTROL_SERVER
+    port = LicenseConstants.LICENSE_MANAGER_PORT
+    sock = socket.socket()
+    sock.connect((host, port))
+    sock.send(bytes(f'REQUEST {job_id}', 'utf-8'))
+
+def release_tokens(job_id):
+    host = LicenseConstants.SLURM_CONTROL_SERVER
+    port = LicenseConstants.LICENSE_MANAGER_PORT
+    sock = socket.socket()
+    sock.connect((host, port))
+    sock.send(bytes(f'REMOVE {job_id}', 'utf-8'))

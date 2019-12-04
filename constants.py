@@ -11,3 +11,6 @@ class LicenseConstants:
     LMUTIL_PATH = u'/usrfem/util/DIVERS/lmutil_linux'
     LICENSE_PATH = u'/usrfem/femsys/abaqus/abaqus_semcon.lic'
     SACCT_ABAQUS_LICENSE_SERVER_STRING = u'abaqus@se-got-lic01'
+    ABAQUS_GRES_STRING = u'gres=license:abaqus:'
+    LICENSE_MANAGER_PORT = 65432
+    SLURM_CONTROL_SERVER = u'se-got-queue01'

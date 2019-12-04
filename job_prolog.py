@@ -2,31 +2,37 @@
 import os
 import subprocess
 import socket
+import logging
 
-HOST = socket.gethostname()
-PORT = 65432
+from constants import LicenseConstants
 
+HOST = LicenseConstants.SLURM_CONTROL_SERVER 
+PORT = LicenseConstants.LICENSE_MANAGER_PORT
 
-
+log_fname = 'debug.log'
+logging.basicConfig(filename=log_fname, 
+                    format='%(asctime)s - %(message)s', 
+                    datefmt='%d-%b-%y %H:%M:%S', level=logging.INFO)
+logging.info('Prolog started')
 if 'SLURM_JOB_ID' in os.environ.keys():
-    job_name = os.environ['SLURM_JOB_ID']
+    job_id = os.environ['SLURM_JOB_ID']
+    logging.info(os.environ)
     job_partition = os.environ['SLURM_JOB_PARTITION']
     #ntasks = os.environ['SLURM_NTASKS']
     #cpus_per_task = os.environ['SLURM_CPUS_PER_TASK']
-    print(os.environ)
 else:
     exit(0)
 
 
 s = socket.socket()
 s.connect((HOST, PORT))
-s.send(b'REQUEST 435 6 1 2019-11-19T09:12:51')
+s.send(bytes(f'REQUEST {job_id}','utf-8'))
 response = s.recv(1024)
-print(response.decode())
+logging.info(response.decode())
 if response.decode() == 'SUCCESS':
-    print('ACCEPTED')
+    pass
 else:
-    print('REJECTED')
+    logging.info('REJECTED')
 s.close()
 
 
