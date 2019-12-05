@@ -6,6 +6,7 @@ import fnmatch
 import subprocess
 import time 
 import socket
+from math import floor
 
 from constants import AbaqusConstants, LicenseConstants
 
@@ -162,7 +163,7 @@ def create_new_input_file(job_name, input_file_name, submit_dir,
             for line in step_lines:
                 new_input_file.write(line)
                 
-def reserve_tokens(job_id):
+""" def reserve_tokens(job_id):
     host = LicenseConstants.SLURM_CONTROL_SERVER
     port = LicenseConstants.LICENSE_MANAGER_PORT
     sock = socket.socket()
@@ -174,4 +175,8 @@ def release_tokens(job_id):
     port = LicenseConstants.LICENSE_MANAGER_PORT
     sock = socket.socket()
     sock.connect((host, port))
-    sock.send(bytes(f'REMOVE {job_id}', 'utf-8'))
+    sock.send(bytes(f'REMOVE {job_id}', 'utf-8')) """
+
+def calculate_abaqus_tokens(ncpus):
+    return floor(5 * ncpus ** 0.422)
+
