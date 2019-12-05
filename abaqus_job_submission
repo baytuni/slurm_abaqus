@@ -71,6 +71,9 @@ if __name__ == "__main__":
     abaqus_version = os.environ['ABQVER'] 
     partition_name = os.environ['SLURM_JOB_PARTITION'] 
     
+    # Necessary for abaqus jobs
+    if 'SLURM_GTIDS' in os.environ:
+        del os.environ['SLURM_GTIDS'] 
     
     #contact license manager and reserve/release licenses if possible
     #if 'SBATCH_GRES' in os.environ:
@@ -87,12 +90,21 @@ if __name__ == "__main__":
     job_folder_name = slurm_job_id + '_' + job_name + '_' + user_name 
 
     #Set the sbatch job name
-    os.environ['SLURM_JOB_NAME'] = job_name
+    #os.environ['SLURM_JOB_NAME'] = job_name
 
     #Determine if checkpointing is necessary
-    if re.search('lowprio', partition_name, re.IGNORECASE):
-        pass 
+    partition_dict = helpers.read_partition(partition_name)
+    if isinstance(partition_dict, dict):
+        preempt_method = partition_dict['PreemptMode']
     else:
+        print("The partition preemption method cannot be determined")
+        sys.exit()
+
+    if re.search('requeue', preempt_method, re.IGNORECASE):
+        print("REQUEUE preemption detected. "
+              "Abaqus checkpoint/restart will be used")
+        pass 
+    else: #This means abaqus checkpoint restart is not gonna be used.
         if old_job_name:
             '''this means job is submitted with a restart option in 
             from the beginning'''
@@ -133,24 +145,20 @@ if __name__ == "__main__":
     # If there the job has been already restarted at least once 
     #move the Res_ files to original files and join odbs
     if os.path.isfile('Res_' + job_name + '.sta'):
-        print("1st condition")
+        print("Job is restarted where it has left of")
 #        wildcard_operations(os.curdir,'*.lck', operation='remove')  
         os.remove(os.path.join(os.curdir, job_name + '.lck'))
         restart_join_run()
         helpers.merge_res_files(job_name)
 
     if os.path.isfile(job_name + '.sta'):
-
+       print("Job is restarted where it has left of.(First Restart)")
        helpers.create_new_input_file(job_name, input_file_name, 
                                      submit_dir, frequency)
        restart_run(u'Res_' + job_name, u'Res_' + input_file_name, job_name)
 
     else:
-        print("3rd Condition")
-        if old_job_name:
-            restart_run(job_name, input_file_name, old_job_name)
-        else:
-            first_run()
-        # If the job is completed, search for a specific string in the job file
+        print("First run")
+        first_run()
 
     end_run()

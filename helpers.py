@@ -81,7 +81,6 @@ def create_scratch_and_move(input_file_name,job_folder_name):
             shutil.copy(include_file_path, scratch_include_path)
 
 
-    
 def merge_res_files(job_name):
     #Renaming all the res files to original filenames
     for ext in AbaqusConstants.FILE_EXTENSIONS:
@@ -162,6 +161,29 @@ def create_new_input_file(job_name, input_file_name, submit_dir,
         for step_lines in all_step_lines[int(last_step) :]:
             for line in step_lines:
                 new_input_file.write(line)
+
+def read_partition(partition_name):
+        partition_dict = scontrol_to_dict('partition', partition_name)
+        if partition_dict:
+            return partition_dict
+        else:
+            return "Partition doesn't exist"
+
+def scontrol_to_dict(entity,name):
+    cmd_to_run = ['scontrol', 'show', f'{entity}', f'{name}']
+    cmd_process = subprocess.Popen(cmd_to_run, stdout=subprocess.PIPE)
+    return_dict = {}
+    shell_output = cmd_process.stdout.read()
+    properties = shell_output.decode().replace('\n','').split()
+    for p in properties:
+        if p:
+            p = p.split('=')
+            key = p[0]
+            value = p[1]
+            return_dict[key] = value
+    return return_dict 
+
+
                 
 """ def reserve_tokens(job_id):
     host = LicenseConstants.SLURM_CONTROL_SERVER
