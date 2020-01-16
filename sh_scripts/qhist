@@ -1,0 +1,3 @@
+#!/bin/bash
+export SACCT_FORMAT="jobid,user,jobname,partition,ntasks,state,elapsed,end"
+sacct $@ -c --format=${SACCT_FORMAT}
